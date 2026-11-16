@@ -1,0 +1,33 @@
+# Telegram check-in targets. Add one [[targets]] block per bot/group.
+#
+# Common keys:
+#   name            unique id, used in logs, state.json and --only
+#   chat            numeric chat id (see list_chats.py), @username or display name
+#   action          "button" | "command"  (see checkin/actions.py)
+#   cooldown_hours  minimum hours between successful check-ins (default 20)
+#   max_wait_minutes if the cooldown ends within this many minutes, wait for it
+#                   instead of skipping the run (default 0). Use for rolling
+#                   "every 24h" bots so a daily schedule doesn't drift short.
+#   enabled         false to pause a target (default true)
+#   success_pattern optional regex matched against the bot reply; if set, the
+#                   check-in only counts as done when the reply matches
+#
+# action = "button":  keywords (list, required), search_limit (default 100),
+#                     reply_timeout seconds (default 15)
+# action = "command": command (required), reply_timeout seconds (default 30)
+
+[[targets]]
+name = "gongyi-plus"
+chat = "8604751086"
+action = "button"
+keywords = ["daily check-in", "daily checkin", "daily check in", "check-in", "check in", "checkin", "daily", "签到", "簽到"]
+cooldown_hours = 20
+
+[[targets]]
+name = "sabubu-lex"
+chat = "@sabubu_lex_bot"
+action = "command"
+command = "/checkin"
+cooldown_hours = 24
+max_wait_minutes = 30
+success_pattern = "điểm danh thành công|check-?in success"

@@ -1,100 +1,42 @@
-import os
+import argparse
 import asyncio
-from datetime import datetime
-from dotenv import load_dotenv
-from telethon import TelegramClient
+import logging
+import sys
+from pathlib import Path
 
-load_dotenv()
-
-api_id = int(os.getenv("TG_API_ID"))
-api_hash = os.getenv("TG_API_HASH")
-phone = os.getenv("TG_PHONE")
-target_chat = os.getenv("TARGET_CHAT")
-
-client = TelegramClient("telegram_session", api_id, api_hash)
+from checkin.config import DEFAULT_CONFIG, load_targets
+from checkin.runner import run
 
 
-def is_checkin_button(text: str) -> bool:
-    if not text:
-        return False
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Check in to every Telegram target listed in targets.toml."
+    )
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--only", nargs="+", metavar="NAME", help="run only these targets")
+    parser.add_argument("--force", action="store_true", help="ignore cooldowns")
+    parser.add_argument("--dry-run", action="store_true", help="show due targets, do nothing")
+    args = parser.parse_args()
 
-    text = text.lower()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    logging.getLogger("telethon").setLevel(logging.WARNING)
 
-    keywords = [
-        "daily check-in",
-        "daily checkin",
-        "daily check in",
-        "check-in",
-        "check in",
-        "checkin",
-        "daily",
-        "签到",
-        "簽到",
-    ]
+    targets = load_targets(args.config)
 
-    return any(keyword in text for keyword in keywords)
+    if args.only:
+        known = {t.name for t in targets}
+        unknown = set(args.only) - known
+        if unknown:
+            parser.error(f"unknown target(s): {', '.join(sorted(unknown))}")
+        targets = [t for t in targets if t.name in args.only]
 
-
-async def get_target_entity():
-    if not target_chat:
-        raise ValueError("Missing TARGET_CHAT in .env file")
-
-    raw = target_chat.strip()
-
-    # Load dialogs first so Telethon can get full entity/access_hash
-    dialogs = await client.get_dialogs(limit=200)
-
-    # If TARGET_CHAT is an ID
-    if raw.lstrip("-").isdigit():
-        target_id = int(raw)
-
-        for dialog in dialogs:
-            if dialog.id == target_id:
-                print(f"Found chat: {dialog.name} | ID: {dialog.id}")
-                return dialog.entity
-
-        print("Cannot find target ID in dialogs.")
-        print("Available chats:")
-
-        for dialog in dialogs:
-            print(f"{dialog.id} | {dialog.name}")
-
-        raise ValueError(f"Cannot find chat id: {target_id}")
-
-    # If TARGET_CHAT is display name
-    for dialog in dialogs:
-        if dialog.name == raw:
-            print(f"Found chat by name: {dialog.name} | ID: {dialog.id}")
-            return dialog.entity
-
-    # If TARGET_CHAT is @username
-    return await client.get_entity(raw)
-
-
-async def main():
-    await client.start(phone=phone)
-
-    entity = await get_target_entity()
-
-    print(f"[{datetime.now()}] Finding check-in button...")
-
-    async for message in client.iter_messages(entity, limit=100):
-        if not message.buttons:
-            continue
-
-        for row_index, row in enumerate(message.buttons):
-            for button_index, button in enumerate(row):
-                button_text = button.text or ""
-                print(f"Found button: {button_text}")
-
-                if is_checkin_button(button_text):
-                    print(f"Click button: {button_text}")
-                    await message.click(row_index, button_index)
-                    print("Clicked successfully.")
-                    return
-
-    print("Cannot find Daily Check-in button in latest 100 messages.")
+    failures = asyncio.run(run(targets, force=args.force, dry_run=args.dry_run))
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(main())

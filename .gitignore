@@ -25,3 +25,6 @@ checkin.log
 Thumbs.db
 .vscode/
 .idea/
+# Check-in runtime state
+state.json
+state.tmp

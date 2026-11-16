@@ -1,5 +1,7 @@
 # Hướng dẫn tạo script Telegram Daily Check-in tự động trên Windows 11
 
+> **Cập nhật:** project đã hỗ trợ nhiều bot/nhóm qua `targets.toml` (không còn dùng `TARGET_CHAT` trong `.env`). Code `daily_checkin.py` trong tài liệu này là phiên bản cũ — xem `README.md` để biết cách thêm target mới.
+
 Tài liệu này hướng dẫn từ đầu đến cuối cách tạo một script Python dùng Telethon để tự động bấm nút **Daily Check-in** trong một bot/chat Telegram, sau đó cấu hình Windows Task Scheduler để chạy hằng ngày.
 
 > Lưu ý: Chỉ nên dùng cho tài khoản cá nhân của bạn, chạy 1 lần/ngày. Không dùng để spam, farm nhiều tài khoản, vượt captcha hoặc bypass cơ chế chống bot.
